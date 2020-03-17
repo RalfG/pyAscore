@@ -1,0 +1,13 @@
+{
+  "PXD006452" : {
+    "ftp" : "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2019/01/PXD006452/",
+    "samples" : ["20160126_exp0722_Lydia_MM4_300NO_1_01.raw",
+                 "20160126_exp0722_Lydia_MM4_300NO_2_01.raw",
+                 "20160126_exp0722_Lydia_MM4_300NO_3_01.raw",
+                 "20160126_exp0722_Lydia_MM4_300NO_4_01.raw",
+                 "20151217_exp0722_Lydia_D8-6_300NO_1_01.raw",
+                 "20151217_exp0722_Lydia_D8-6_300NO_2_01.raw",
+                 "20151217_exp0722_Lydia_D8-6_300NO_3_01.raw",
+                 "20151217_exp0722_Lydia_D8-6_300NO_4_01.raw"]
+  }
+}
