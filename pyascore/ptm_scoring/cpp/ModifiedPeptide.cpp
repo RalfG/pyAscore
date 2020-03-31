@@ -253,41 +253,41 @@ namespace ptmscoring {
     size_t ModifiedPeptide::FragmentGraph::getChargeState () { return charge_state; }
 
     void ModifiedPeptide::FragmentGraph::resetResidueInd () {
-        if ( fragment_type == 'b' ) {
+        if ( std::string("bc").find(fragment_type) != std::string::npos ) {
             residue_ind = 0;
-        } else if ( fragment_type == 'y' ) {
+        } else if ( std::string("yz").find(fragment_type) != std::string::npos ) {
             residue_ind = modified_peptide->residues.size() - 1;
         } else { throw 30; }
     }
 
     void ModifiedPeptide::FragmentGraph::setResidueInd (size_t new_ind) {
-        if ( fragment_type == 'b' ) {
+        if ( std::string("bc").find(fragment_type) != std::string::npos ) {
             residue_ind = std::min(residue_ind, new_ind);
-        } else if ( fragment_type == 'y' ) {
+        } else if ( std::string("yz").find(fragment_type) != std::string::npos ) {
             residue_ind = residue_ind == SIZE_MAX ? new_ind : std::max(residue_ind, new_ind);
         } else { throw 30; }
     }
 
     void ModifiedPeptide::FragmentGraph::incrResidueInd () {
-        if ( fragment_type == 'b' ) {
+        if ( std::string("bc").find(fragment_type) != std::string::npos ) {
             residue_ind++;
-        } else if ( fragment_type == 'y' ) {
+        } else if ( std::string("yz").find(fragment_type) != std::string::npos ) {
             residue_ind--;
         } else { throw 30; }
     }
 
     bool ModifiedPeptide::FragmentGraph::isResidueEnd () {
-        if ( fragment_type == 'b' ) {
+        if ( std::string("bc").find(fragment_type) != std::string::npos ) {
             return residue_ind == modified_peptide->residues.size();
-        } else if ( fragment_type == 'y' ) {
+        } else if ( std::string("yz").find(fragment_type) != std::string::npos ) {
             return residue_ind == SIZE_MAX;
         } else { throw 30; }
     }
 
     size_t ModifiedPeptide::FragmentGraph::getResidueDistance () {
-        if ( fragment_type == 'b' ) {
+        if ( std::string("bc").find(fragment_type) != std::string::npos ) {
             return residue_ind;
-        } else if ( fragment_type == 'y' ) {
+        } else if ( std::string("yz").find(fragment_type) != std::string::npos ) {
             return modified_peptide->residues.size() - residue_ind - 1;
         } else { throw 30; }
     }
@@ -394,7 +394,7 @@ namespace ptmscoring {
     void ModifiedPeptide::FragmentGraph::setSignature (std::vector<size_t> new_signature) {
         if (new_signature.size() != modifiable.size()) {throw 50;}
         
-        if (fragment_type == 'y') {
+        if ( std::string("yz").find(fragment_type) != std::string::npos ) {
             std::reverse(new_signature.begin(), new_signature.end());
         }
 
@@ -419,8 +419,8 @@ namespace ptmscoring {
             signature_vector.push_back(signature.at(it));
         }
 
-        // For efficiency's sake, y fragment signatures are always backwards
-        if (fragment_type == 'y') {
+        // For efficiency's sake, y and z fragment signatures are always backwards
+        if ( std::string("yz").find(fragment_type) != std::string::npos ) {
             std::reverse(signature_vector.begin(), signature_vector.end());
         }
 
@@ -431,7 +431,12 @@ namespace ptmscoring {
 
         double fragment_mz = running_sum.back();
         if (fragment_type == 'y') {
-            fragment_mz += 18.01528;
+            fragment_mz += 18.01528; // Gain of H2O
+        } else if (fragment_type == 'z') {
+            fragment_mz += 18.01528; // Gain of H2O
+            fragment_mz -= 17.03052; // Loss of NH3
+        } else if (fragment_type == 'c') {
+            fragment_mz += 17.03052; // Gain of NH3
         }
 
         if (charge_state > 0) {
