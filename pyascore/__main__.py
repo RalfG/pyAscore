@@ -1,13 +1,16 @@
-import sys
 import argparse
+import pickle
 import re
-from pyascore import *
+import sys
 from datetime import datetime
 from itertools import groupby
+
 import numpy as np
 from pandas import DataFrame
 from tqdm import tqdm
-import pickle
+
+from pyascore import *
+
 
 def get_time_stamp():
     return datetime.now().strftime("%m/%d/%y %H:%M:%S")
@@ -21,7 +24,7 @@ def args_from_file(file_path):
             if search_result is not None:
                 arg_list.append("--" + search_result.group(1))
                 arg_list.append(search_result.group(2))
-        
+
         return arg_list
 
 def build_spectra_parser(arg_ref):
@@ -49,7 +52,7 @@ def build_ascore(arg_ref):
         nl_groups = arg_ref.neutral_loss_groups.split(";")
         nl_masses = [float(m) for m in arg_ref.neutral_loss_masses.split(";")]
         [ascore.add_neutral_loss(g, m) for g,m in zip(nl_groups, nl_masses)]
- 
+
     return ascore
 
 def process_mods(arg_ref, positions, masses):
@@ -86,7 +89,7 @@ def main():
                                      " All scoring has been implemented in custom c++ code which"
                                      " is exposed to python via cython wrappers."
                                      " Any PTM which be defined with a canonical amino acid and"
-                                     " mass shift can be analyzed." 
+                                     " mass shift can be analyzed."
     )
     parser.add_argument("--match_save", action="store_true")
     parser.add_argument("--residues", type=str, default="STY",
@@ -124,6 +127,7 @@ def main():
     parser.add_argument("--ident_file_type", type=str, default="pepXML",
                         help="The type of file supplied for identifications."
                              " One of pepXML, percolatorTXT. Default: pepXML")
+    parser.add_argument("--site_level_output", action="store_true")
     parser.add_argument("spec_file", type=str,
                         help="MS Spectra file supplied as MzML")
     parser.add_argument("ident_file", type=str,
@@ -155,29 +159,54 @@ def main():
                 if args.match_save:
                     save_match(spectra, match)
                 ascore.score(
-                    spectra["mz_values"], 
-                    spectra["intensity_values"], 
+                    spectra["mz_values"],
+                    spectra["intensity_values"],
                     match["peptide"], n_variable,
                     const_mod_pos, const_mod_masses
                 )
-                alt_sites = [",".join([str(site) for site in site_list]) 
-                             for site_list in ascore.alt_sites]
-                scores.append([match["scan"], 
-                               ascore.best_sequence, 
-                               ascore.best_score,
-                               ";".join([str(s) for s in ascore.ascores]),
-                               ";".join(alt_sites)])
+                if args.site_level_output:
+                    pep_scores = [
+                        (np.argmax(p["signature"]), p["weighted_score"])
+                        for p in ascore.pep_scores
+                    ]
+                    for idx, score in sorted(pep_scores):
+                        scores.append([
+                                match["scan"],
+                                match["peptide"],
+                                idx,
+                                score,
+                                ascore.best_score,
+                        ])
+                else:
+                    alt_sites = [",".join([str(site) for site in site_list])
+                                for site_list in ascore.alt_sites]
+                    scores.append([match["scan"],
+                                ascore.best_sequence,
+                                ascore.best_score,
+                                ";".join([str(s) for s in ascore.ascores]),
+                                ";".join(alt_sites)])
 
-    score_dataframe = DataFrame(scores,
-                                columns=["Scan",
-                                         "LocalizedSequence",
-                                         "PepScore",
-                                         "Ascores",
-                                         "AltSites"])
+    if args.site_level_output:
+        columns = [
+                "Scan",
+                "Sequence",
+                "SiteIndex",
+                "PepScore",
+                "BestPepScore",
+        ]
+    else:
+        columns = [
+            "Scan",
+            "LocalizedSequence",
+            "PepScore",
+            "Ascores",
+            "AltSites"
+        ]
+
+    score_dataframe = DataFrame(scores, columns=columns)
     score_dataframe.to_csv(args.out_file, sep="\t", index=False)
     print("{} -- Ascore Completed".format(get_time_stamp()))
 
 
 if __name__ == "__main__":
     main()
-
